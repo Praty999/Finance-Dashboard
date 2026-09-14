@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String    @unique
+  passwordHash String
+  emailVerified Boolean  @default(true)
+  emailVerificationToken String?
+  emailVerificationExpire DateTime?
+  emailVerificationAttempts Int @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  resetPasswordToken  String?
+  resetPasswordExpire DateTime?
+  resetPasswordAttempts Int       @default(0)
+  resetPasswordSentAt   DateTime?
+
+  transactions Transaction[]
+  categories   Category[]
+  budgets      Budget[]
+  recurring    RecurringTransaction[]
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      String   // "income" | "expense"
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@unique([userId, name, type])
+}
+
+model Transaction {
+  id            Int      @id @default(autoincrement())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        Int
+  category      Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId    Int?
+  categoryName  String   // denormalized for fast display/search (kept in sync)
+  type          String   // "income" | "expense"
+  amount        Float
+  description   String   @default("")
+  date          DateTime
+  paymentMethod String   @default("UPI")
+  createdAt     DateTime @default(now())
+
+  @@index([userId, date])
+}
+
+model Budget {
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId Int?
+  categoryName String // denormalized
+  amount     Float
+  month      Int
+  year       Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, categoryName, month, year])
+  @@index([userId, month, year])
+}
+
+model RecurringTransaction {
+  id            Int      @id @default(autoincrement())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        Int
+  title         String
+  amount        Float
+  type          String   @default("expense")
+  categoryName  String   @default("Other")
+  frequency     String   @default("Monthly")
+  nextDue       DateTime
+  paymentMethod String   @default("UPI")
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+}
