@@ -61,6 +61,12 @@ router.post('/register',
       try {
         await sendVerificationCode(user.email, verificationCode);
       } catch (mailError) {
+        console.error('Verification email failed:', {
+          code: mailError.code,
+          responseCode: mailError.responseCode,
+          command: mailError.command,
+          message: mailError.message,
+        });
         await prisma.user.delete({ where: { id: user.id } });
         return res.status(503).json({ message: 'Verification email is temporarily unavailable. Please try again later.' });
       }
@@ -144,6 +150,12 @@ router.post('/forgotpassword', body('email').isEmail(), async (req, res) => {
     try {
       await sendResetCode(user.email, code);
     } catch (mailError) {
+      console.error('Password reset email failed:', {
+        code: mailError.code,
+        responseCode: mailError.responseCode,
+        command: mailError.command,
+        message: mailError.message,
+      });
       await prisma.user.update({
         where: { id: user.id },
         data: { resetPasswordToken: null, resetPasswordExpire: null, resetPasswordAttempts: 0, resetPasswordSentAt: null },
