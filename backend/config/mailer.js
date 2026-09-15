@@ -15,7 +15,27 @@ async function sendWithResend(to, subject, text) {
   if (!response.ok) throw new Error(`Resend API returned ${response.status}`);
 }
 
+async function sendWithBrevo(to, subject, text) {
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { email: process.env.MAIL_FROM.replace(/^.*<|>.*$/g, '').trim() },
+      to: [{ email: to }],
+      subject,
+      textContent: text,
+    }),
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) throw new Error(`Brevo API returned ${response.status}`);
+}
+
 async function sendEmail(to, subject, text) {
+  if (process.env.BREVO_API_KEY) return sendWithBrevo(to, subject, text);
   if (process.env.RESEND_API_KEY) return sendWithResend(to, subject, text);
   const transporter = getTransporter();
   await transporter.sendMail({ from: process.env.MAIL_FROM, to, subject, text });
