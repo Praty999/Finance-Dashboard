@@ -9,9 +9,10 @@ const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
+const isVercelPreview = (origin) => /^https:\/\/finance-dashboard-[a-z0-9-]+-finance-dashboard9\.vercel\.app$/i.test(origin);
 app.use(cors({
   origin: (requestOrigin, callback) => {
-    if (!requestOrigin || allowedOrigins.includes(requestOrigin)) return callback(null, true);
+    if (!requestOrigin || allowedOrigins.includes(requestOrigin) || isVercelPreview(requestOrigin)) return callback(null, true);
     return callback(new Error('CORS origin not allowed'));
   },
   credentials: true,
